@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>حكايتنا</title>
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Tajawal:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rose: #f0a7bb; --wine: #4a1024; --cream: #fff3ee; --gold: #f3d9b1;
+    --heart: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.6 5 6 5c2 0 3.4 1.1 4 2.3h4C14.6 6.1 16 5 18 5c3.4 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z'/></svg>");
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    overflow: hidden; overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    background: #14040b; color: var(--cream); font-family: "Tajawal", sans-serif;
+  }
+  #stage { position: fixed; inset: 0; overflow: hidden; z-index: 2; pointer-events: none; }
+
+  .scene {
+    position: absolute; inset: 0; z-index: 0;
+    display: flex; align-items: flex-end; justify-content: center;
+    overflow: hidden; visibility: hidden; opacity: 0;
+    transition: opacity 1.8s ease-in-out, visibility 0s linear 1.8s;
+    background: linear-gradient(160deg, #7a1f3d, #2a0916);
+  }
+  .scene.active { z-index: 2; visibility: visible; opacity: 1; transition: opacity 1.8s ease-in-out, visibility 0s; }
+  .scene.leaving { z-index: 1; visibility: visible; opacity: 1; transition: none; }
+
+  #flash {
+    position: fixed; inset: 0; z-index: 13; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+    background: radial-gradient(circle at 50% 45%, rgba(255,222,205,.8), rgba(240,150,180,.3) 45%, transparent 72%);
+  }
+  #flash.go { animation: flash 1.8s ease-in-out; }
+  @keyframes flash { 0% { opacity: 0; } 35% { opacity: .85; } 100% { opacity: 0; } }
+
+  .bg { position: absolute; inset: -6%; background-size: cover; background-position: center; transform: scale(1); }
+  .scene.active .bg { animation: kenburns 18s ease-out forwards; }
+  .scene:nth-child(even).active .bg { animation-name: kenburns2; }
+  .bg.noimg {
+    background:
+      radial-gradient(circle at 50% 28%, rgba(240,150,180,.55), transparent 55%),
+      radial-gradient(circle at 18% 82%, rgba(243,217,177,.28), transparent 50%),
+      linear-gradient(160deg, #8a2547, #2a0916);
+  }
+  .bg.noimg::after {
+    content: ""; position: absolute; left: 50%; top: 14%; width: 46vmin; height: 46vmin;
+    margin-left: -23vmin; opacity: .5;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23f0a7bb' d='M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.6 5 6 5c2 0 3.4 1.1 4 2.3h4C14.6 6.1 16 5 18 5c3.4 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z'/></svg>") center / contain no-repeat;
+    filter: drop-shadow(0 0 30px rgba(240,167,187,.8)); animation: beat 2.4s ease-in-out infinite;
+  }
+
+  .shade {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(to top, rgba(18,2,9,.93) 0%, rgba(18,2,9,.72) 28%, rgba(18,2,9,.28) 52%, rgba(18,2,9,0) 72%),
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(18,2,9,.35) 100%);
+  }
+
+  .content {
+    position: relative; z-index: 2;
+    width: min(640px, 90vw); text-align: center;
+    padding: 0 4px calc(6vh + 88px + env(safe-area-inset-bottom, 0px));
+  }
+  .txt { --fs: 1; }
+  .txt p {
+    font-size: calc(clamp(1.05rem, min(4.1vw, 3vh), 1.4rem) * var(--fs));
+    line-height: 1.95; font-weight: 400; margin-bottom: 6px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.75), 0 3px 18px rgba(0,0,0,.8);
+  }
+  .txt p.sorry-line {
+    font-family: "Aref Ruqaa", serif; font-weight: 700; color: var(--gold);
+    font-size: calc(clamp(1.25rem, min(5vw, 3.6vh), 1.7rem) * var(--fs)); margin-bottom: 10px;
+  }
+  .orn { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 auto 12px; color: var(--rose); font-size: 1.1rem; }
+  .orn::before, .orn::after { content: ""; height: 1px; width: clamp(40px, 16vw, 90px); background: linear-gradient(90deg, transparent, var(--rose)); }
+  .orn::after { transform: scaleX(-1); }
+
+  .reveal { opacity: 0; transform: translateY(18px); filter: blur(10px); }
+  .scene.active .reveal { animation: reveal 1.5s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: calc(1.3s + var(--i) * 1s); }
+  .scene.skip .reveal { animation: none !important; opacity: 1; transform: none; filter: none; }
+
+  /* شاشة الرسالة الطويلة النهائية */
+  #final-screen {
+    position: fixed; inset: 0; z-index: 30; background: rgba(14, 3, 8, 0.97);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px; text-align: center; opacity: 0; pointer-events: none;
+    transition: opacity 1s ease;
+  }
+  #final-screen.show { opacity: 1; pointer-events: auto; }
+  .final-box {
+    max-width: 580px; width: 100%; max-height: 65vh; overflow-y: auto;
+    font-family: "Aref Ruqaa", serif; font-size: clamp(1.2rem, 4vw, 1.5rem);
+    line-height: 2.2; color: var(--cream); text-shadow: 0 2px 10px rgba(0,0,0,.8);
+    margin-bottom: 24px; white-space: pre-wrap; direction: rtl;
+  }
+  .final-buttons {
+    display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+    opacity: 0; transform: translateY(20px); transition: all 1s ease;
+  }
+  .final-buttons.show { opacity: 1; transform: translateY(0); }
+  .whatsapp-btn {
+    background: #25d366 !important; border-color: #25d366 !important; color: #fff !important; font-weight: 500;
+  }
+  .whatsapp-btn:hover { background: #20ba5a !important; }
+
+  /* زرار "كمل" اللي بيظهر في آخر السلايدر */
+  #next-stage-btn {
+    position: fixed; z-index: 26; left: 50%; transform: translateX(-50%);
+    bottom: calc(6vh + 55px + env(safe-area-inset-bottom, 0px));
+    background: rgba(240,167,187,.25); border: 1px solid var(--rose);
+    color: var(--cream); padding: 9px 28px; border-radius: 999px;
+    font-family: inherit; font-size: 1.05rem; cursor: pointer;
+    box-shadow: 0 0 20px rgba(240,167,187,.3); display: none;
+    animation: pulse 2s infinite;
+  }
+  #next-stage-btn.show { display: block; }
+
+  .grain { position: fixed; inset: 0; z-index: 12; pointer-events: none; opacity: .1; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.6'/></svg>"); }
+  .leak { position: fixed; inset: -10%; z-index: 11; pointer-events: none; mix-blend-mode: screen; opacity: .35;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(255,150,180,.3), transparent 42%),
+      radial-gradient(circle at 92% 96%, rgba(255,205,150,.22), transparent 45%);
+    animation: drift 14s ease-in-out infinite alternate; }
+
+  .bar { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 20; transition: height 2s ease; }
+  .bar.top { top: 0; } .bar.bottom { bottom: 0; }
+  body.started .bar { height: 6vh; }
+
+  #intro {
+    position: fixed; inset: 0; z-index: 1;
+    display: flex; align-items: flex-end; justify-content: center;
+    background: #14040b center / cover no-repeat;
+    padding: 0 22px calc(7vh + env(safe-area-inset-bottom, 0px));
+    transition: opacity .6s ease, visibility 0s linear .6s;
+    text-align: center;
+  }
+  #intro::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(to top, rgba(18,2,9,.95) 0%, rgba(18,2,9,.75) 38%, rgba(18,2,9,.2) 66%, rgba(18,2,9,0) 82%);
+  }
+  #intro.gone { opacity: 0; visibility: hidden; }
+  .panel { position: relative; z-index: 1; display: none; flex-direction: column; align-items: center; gap: 14px; width: min(500px, 100%); transition: transform .5s ease; }
+  .panel.show { display: flex; animation: panelin 1.2s ease both; }
+  #intro.kb .panel { transform: translateY(-24vh); }
+  #intro h1 {
+    font-family: "Aref Ruqaa", serif; font-weight: 700; line-height: 1.5; font-size: clamp(2rem, 8vw, 3.2rem);
+    background: linear-gradient(180deg, #fff3ee 0%, #f0a7bb 55%, #f3d9b1 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  }
+  .panel p { font-size: 1.25rem; line-height: 1.9; text-shadow: 0 1px 3px rgba(0,0,0,.75), 0 2px 14px rgba(0,0,0,.8); }
+  .sorry p { margin: 0; }
+  .choices { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .bigheart { width: 54px; color: var(--rose); filter: drop-shadow(0 0 20px rgba(240,167,187,.85)); animation: beat 1.8s ease-in-out infinite; }
+
+  #ans {
+    width: 100%; text-align: center; direction: ltr;
+    font: inherit; font-size: 1.35rem; color: var(--cream);
+    background: rgba(255,243,238,.14); border: 1px solid rgba(240,167,187,.75);
+    border-radius: 16px; padding: 13px; outline: none;
+    -webkit-user-select: text; user-select: text; touch-action: auto;
+  }
+  #ans::placeholder { color: rgba(255,243,238,.5); }
+  #ans:focus { box-shadow: 0 0 0 3px rgba(240,167,187,.3); }
+  #err { min-height: 1.5em; color: #ffc0cf; font-size: 1rem; }
+  .shake { animation: shake .45s; }
+
+  .btn {
+    font-family: inherit; font-size: 1.15rem; color: var(--cream);
+    background: rgba(240,167,187,.18); border: 1px solid var(--rose);
+    padding: 12px 38px; border-radius: 999px; cursor: pointer;
+    transition: background .3s, transform .3s; box-shadow: 0 0 30px rgba(240,167,187,.25);
+  }
+  .btn:hover { background: rgba(240,167,187,.36); transform: scale(1.05); }
+  .btn:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+  .yes { background: var(--rose); color: var(--wine); font-weight: 500; }
+  .yes:hover { background: #ffc3d2; }
+
+  #nav {
+    position: fixed; z-index: 25; left: 0; right: 0;
+    bottom: calc(6vh + 14px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    pointer-events: none; opacity: 0; transition: opacity 1s ease 1.5s;
+  }
+  body.started #nav { opacity: 1; }
+  #tapline { font-size: .92rem; color: var(--gold); opacity: 0; transition: opacity .8s ease; }
+  #tapline.show { opacity: .95; animation: pulse 2.2s ease-in-out infinite; }
+  #hrow { display: flex; gap: 10px; }
+  #hrow span { font-size: 16px; line-height: 1; color: rgba(255,243,238,.3); transition: color .6s ease; }
+  #hrow span.done { color: var(--rose); }
+  #hrow span.on { color: var(--gold); animation: beat 1.3s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(243,217,177,.85)); }
+
+  #mute {
+    position: fixed; z-index: 25; top: calc(6vh + 14px + env(safe-area-inset-top, 0px)); left: 14px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(0,0,0,.4); border: 1px solid rgba(255,243,238,.3);
+    color: var(--cream); font-size: 1.05rem; cursor: pointer;
+    opacity: 0; pointer-events: none; transition: opacity 1s ease 1.5s;
+  }
+  body.started #mute { opacity: 1; pointer-events: auto; }
+
+  #hearts { position: fixed; inset: 0; z-index: 10; pointer-events: none; overflow: hidden; }
+  .fh { position: absolute; bottom: -40px; color: var(--rose); opacity: 0; animation: floatup linear forwards; }
+
+  @keyframes kenburns { from { transform: scale(1) translate(0,0); } to { transform: scale(1.12) translate(-1.5%, -1%); } }
+  @keyframes kenburns2 { from { transform: scale(1.12) translate(1.5%, 1%); } to { transform: scale(1) translate(0,0); } }
+  @keyframes reveal { to { opacity: 1; transform: none; filter: blur(0); } }
+  @keyframes panelin { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  @keyframes floatup { 0% { opacity: 0; transform: translateY(0) rotate(0deg); } 15% { opacity: .85; } 100% { opacity: 0; transform: translateY(-105vh) rotate(25deg); } }
+  @keyframes drift { from { translate: 0 0 scale(1); } to { translate: 3% -2% scale(1.12); } }
+  @keyframes beat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.22); } }
+  @keyframes pulse { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
+  @keyframes shake { 20%,60% { transform: translateX(-9px); } 40%,80% { transform: translateX(9px); } }
+</style>
+</head>
+<body>
+
+<script>
+  // رابط الأغنية الخاص بك
+  const MUSIC_URL = "https://a.top4top.io/m_395603if01.mp3";
+
+  // روابط الصور الخاصة بك بالترتيب الصحيح
+  const IMAGES = [
+    "https://a.top4top.io/p_3956qjilx1.jpg", // 1 - شاشة السؤال
+    "https://b.top4top.io/p_3956rxysa1.jpg", // 2 - شاشة الاختيارين
+    "https://d.top4top.io/p_395617nwb1.jpg", // 3 - الصفحة الأولى
+    "https://e.top4top.io/p_39564x96y1.jpg", // 4 - الصفحة الثانية
+    "https://f.top4top.io/p_3956bpbr31.jpg", // 5 - الصفحة الثالثة
+    "https://l.top4top.io/p_3956zuyao1.jpg", // 6 - الصفحة الرابعة
+    "https://j.top4top.io/p_395635n0c1.jpg", // 7 - الصفحة الخامسة
+    "https://a.top4top.io/p_3956u4gst1.jpg", // 8 - الصفحة السادسة
+    "https://a.top4top.io/p_3956z3bpy1.jpg"  // 9 - الصفحة السابعة
+  ];
+
+  const QUESTION = "بدايتنا كانت امتي؟";
+  const ANSWERS = ["1/4/2026", "1/4/26", "1/4"];
+
+  const SORRY = [
+    "كملنا 7 شهور يحبي",
+    "بس انا جي اقول كلمه واحده قبل م اكمل",
+    "اسف علي كل حاجه وحشه مني",
+    "وحقك علي عليا ينور عيوني"
+  ];
+
+  const NOT_FORGIVEN_LINE = "انا اسف يقلي بس حابب اقولك بنسبه النهاردا";
+
+  const MESSAGE = [
+    ["انت امنيتي ومونيا انت عمري الحلو اللي نفسي يكمل معايا",
+     "يبت دنيتي حبيبتي وكل يوم بحبك اكتر من الي قبلو",
+     "انتي كل م املك انتي معشوقتي ونا بحبك اوي"],
+
+    ["وكده كنا بنقول ولا كملنا شهر ولا اتنين",
+     "وساعتها انت فكرتي ان اخرنا كمان اتنين",
+     "بس انا جاي اقول لك ان النهارده احنا عدينا الاتنين",
+     "وكده ولا واحد ولا اتنين كده زود عليهم كمان اتنين اتنين",
+     "والنهارده زود واحد كمان كده يبقي كده 7 شهور"],
+
+    ["كل شهر بحس بيكي بقيتي اقرب ليا ولقلبي",
+     "انتي حبي وعمري وكل ما املك",
+     "انتي حياتي يبت"],
+
+    ["اول مره شفتك اتمنيتك ليا",
+     "والحمد لله بقيتي ليا لوحدي ونا وبس",
+     "انا بحبك يبت والله العظيم بحبك اوي كمان",
+     "ومقدرش علي زعلك والله"],
+
+    ["وعايز اتسفلك يروح قلبي واقولك اني بحبك",
+     "واني مقدرش ع بصه وحشه من عينك تعجزني وبص تانيه تحيني",
+     "وبقولك اني عايزك انتي ليا وانا وبس ونا معاكي لاخر العمر"],
+
+    ["كده انا عارفك من 1/4 والنهارده 1/11",
+     "يعني كد 7 شهور",
+     "وعقبال السبعه يبقي سبعه بس سنين والسنين يبقي قرون",
+     "ونكمل العمر كلو معا"],
+
+    ["قلبي ساعه ما سوفتك كان بيدق جامد اكنو فراحان بوجودك",
+     "بس مكنش عارف اوصف شعوري",
+     "دلوقتي انا متاكد انو الحب يساده",
+     "انا بحبك اوي والله"]
+  ];
+
+  // الرسالة الطويلة في النهاية (نفس روح كلامك وزودنا عليها عشان تكمل الحكاية بشياكة)
+  const FINAL_LONG_MESSAGE = `أنا بحبك قوي يا نور عيوني.. ومهما الدنيا لفت بينا وعدت أيام بحلوها ومرها، هفضل دايماً جنبِك ومعاكِ لأخر عمرنا.\n\nالكلمات دي مش مجرد حروف، دي نبضات قلبي اللي اختاركِ من أول لحظة شافك فيها واتعلق بوجودك.\nعايز أكمل باقي عمري كله وأنا بضحك معاكِ وبنواجه كل حاجة سوا يا أغلى ما في دنيتي.\n\nكل سنة واحنا مع بعض، وكل شهر وأنتي أقرب لقلبي.. بحبك وهفضل أقولها لحد آخر نفس في عمري. 🤍✨`;
+</script>
+
+<div class="leak"></div><div class="grain"></div>
+<div id="hearts"></div>
+<div id="flash"></div>
+<div class="bar top"></div><div class="bar bottom"></div>
+
+<div id="nav">
+  <div id="tapline">المس الشاشة للمتابعة</div>
+  <div id="hrow"></div>
+</div>
+<button id="next-stage-btn">كمل 🤍</button>
+<button id="mute" aria-label="الصوت">♪</button>
+<audio id="music" loop preload="auto"></audio>
+
+<!-- شاشة الرسالة الطويلة النهائية -->
+<div id="final-screen">
+  <div class="final-box" id="typed-text"></div>
+  <div class="final-buttons" id="finalBtns">
+    <a id="btnForgive" class="btn yes whatsapp-btn" target="_blank">سامحتك وأنا خلاص صافية 💗</a>
+    <a id="btnNotYet" class="btn whatsapp-btn" target="_blank">لسه شوية 🥺</a>
+  </div>
+</div>
+
+<div id="intro">
+  <div class="panel show" id="p1">
+    <svg class="bigheart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.6 5 6 5c2 0 3.4 1.1 4 2.3h4C14.6 6.1 16 5 18 5c3.4 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>
+    <h1>سؤال قبل ما نبدأ</h1>
+    <p id="q"></p>
+    <input id="ans" type="text" inputmode="text" autocomplete="off" placeholder="يوم / شهر / سنة" aria-label="الإجابة">
+    <div id="err"></div>
+    <button class="btn" id="check">تأكيد</button>
+  </div>
+
+  <div class="panel sorry" id="p2">
+    <svg class="bigheart" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.6 5 6 5c2 0 3.4 1.1 4 2.3h4C14.6 6.1 16 5 18 5c3.4 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>
+    <div id="sorryText"></div>
+    <div class="choices">
+      <button class="btn yes" id="forgive">سمحتك 💗</button>
+      <button class="btn" id="noforgive">مسمحتكش</button>
+    </div>
+  </div>
+</div>
+
+<div id="stage"></div>
+
+<script>
+  const stage = document.getElementById("stage");
+  const hrow = document.getElementById("hrow");
+  const tapline = document.getElementById("tapline");
+  const music = document.getElementById("music");
+  const intro = document.getElementById("intro");
+  const flash = document.getElementById("flash");
+  const nextStageBtn = document.getElementById("next-stage-btn");
+  const finalScreen = document.getElementById("final-screen");
+  const typedTextEl = document.getElementById("typed-text");
+  const finalBtns = document.getElementById("finalBtns");
+
+  let scenes = [], els = [], hs = [];
+  let cur = -1, lock = false, done = false, doneTimer, started = false, last = { x: 50, y: 50 };
+  let wantMusic = false, muted = false;
+
+  function tryLoad(url) {
+    return new Promise(res => {
+      const im = new Image();
+      im.referrerPolicy = "no-referrer";
+      const t = setTimeout(() => res(null), 9000);
+      im.onload = () => { clearTimeout(t); res(url); };
+      im.onerror = () => { clearTimeout(t); res(null); };
+      im.src = url;
+    });
+  }
+  function firstOk(list) {
+    return new Promise(res => {
+      let n = list.length;
+      list.forEach(u => tryLoad(u).then(r => { if (r) res(r); else if (--n === 0) res(null); }));
+    });
+  }
+  function resolveImage(url) {
+    const list = [url, "https://wsrv.nl/?url=" + encodeURIComponent(url)];
+    return firstOk(list);
+  }
+  const RESOLVED = IMAGES.map(() => null);
+  let loaded = false;
+  const FALLBACK_BG = "radial-gradient(circle at 50% 28%, rgba(240,150,180,.5), transparent 55%), linear-gradient(160deg, #8a2547, #2a0916)";
+  function setGateBg(i) {
+    const u = RESOLVED[i];
+    if (!u && !loaded) return;
+    intro.style.backgroundImage = u ? `url('${u}')` : FALLBACK_BG;
+  }
+  const imagesReady = Promise.all(IMAGES.map((u, i) => resolveImage(u).then(r => {
+    RESOLVED[i] = r;
+    if (i === 0 && !intro.classList.contains("step2")) setGateBg(0);
+    if (i === 1 && intro.classList.contains("step2")) setGateBg(1);
+  }))).then(() => {
+    loaded = true;
+    setGateBg(intro.classList.contains("step2") ? 1 : 0);
+  });
+  intro.style.backgroundImage = `url('${IMAGES[0]}')`;
+
+  document.getElementById("q").textContent = QUESTION;
+  document.getElementById("sorryText").innerHTML = SORRY.map(t => `<p>${t}</p>`).join("");
+
+  function norm(v) {
+    v = v.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+         .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    return v.split(/\D+/).filter(Boolean).map(x => String(parseInt(x, 10))).join("/");
+  }
+  const input = document.getElementById("ans");
+  const err = document.getElementById("err");
+
+  function startMusic() {
+    wantMusic = true;
+    if (!MUSIC_URL) { document.getElementById("mute").style.display = "none"; return; }
+    if (!music.getAttribute("src")) { music.src = MUSIC_URL; music.volume = 0.65; }
+    music.play().catch(() => {});
+  }
+  music.addEventListener("canplay", () => { if (wantMusic && !muted && music.paused) music.play().catch(() => {}); });
+
+  input.addEventListener("focus", () => intro.classList.add("kb"));
+  input.addEventListener("blur", () => intro.classList.remove("kb"));
+
+  function check() {
+    if (ANSWERS.includes(norm(input.value))) {
+      startMusic();
+      input.blur();
+      intro.classList.add("step2");
+      document.getElementById("p1").classList.remove("show");
+      document.getElementById("p2").classList.add("show");
+      setGateBg(1);
+      imagesReady.then(() => setGateBg(1));
+    } else {
+      err.textContent = "لا يا قلبي، افتكري كويس 💭";
+      input.classList.remove("shake"); void input.offsetWidth; input.classList.add("shake");
+    }
+  }
+  document.getElementById("check").onclick = check;
+  input.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+
+  document.getElementById("forgive").onclick = () => startStory(false);
+  document.getElementById("noforgive").onclick = () => startStory(true);
+
+  let starting = false;
+  async function startStory(notForgiven) {
+    if (starting) return; starting = true;
+    if (music.paused && !muted) startMusic();
+    await Promise.race([imagesReady, new Promise(r => setTimeout(r, 9000))]);
+    scenes = MESSAGE.map((lines, i) => ({
+      img: RESOLVED[i + 2] || "",
+      lines: i === 0 && notForgiven ? [NOT_FORGIVEN_LINE, ...lines] : lines,
+      sorry: i === 0 && notForgiven
+    }));
+    build();
+    started = true;
+    document.body.classList.add("started");
+    show(0);
+    setTimeout(() => intro.classList.add("gone"), 2000);
+  }
+
+  function est(s) { return 1.3 + s.lines.length + 1.5; }
+  function build() {
+    stage.innerHTML = ""; hrow.innerHTML = "";
+    scenes.forEach(s => {
+      const el = document.createElement("section");
+      el.className = "scene";
+      const bg = s.img ? ` style="background-image:url('${s.img}')"` : "";
+      let html = `<div class="bg${s.img ? "" : " noimg"}"${bg}></div><div class="shade"></div><div class="content"><div class="txt">`;
+      html += `<div class="orn reveal" style="--i:0">♥</div>`;
+      s.lines.forEach((l, k) => {
+        const cls = (s.sorry && k === 0) ? "reveal sorry-line" : "reveal";
+        html += `<p class="${cls}" style="--i:${k + 1}">${l}</p>`;
+      });
+      html += `</div></div>`;
+      el.innerHTML = html;
+      stage.appendChild(el);
+      const h = document.createElement("span"); h.textContent = "♥"; hrow.appendChild(h);
+    });
+    els = [...document.querySelectorAll(".scene")];
+    hs = [...hrow.children];
+    fitAll();
+  }
+
+  function fit(el) {
+    const txt = el.querySelector(".txt");
+    let fs = 1; txt.style.setProperty("--fs", fs);
+    const max = window.innerHeight * 0.5;
+    while (txt.offsetHeight > max && fs > 0.55) { fs -= 0.05; txt.style.setProperty("--fs", fs.toFixed(2)); }
+  }
+  function fitAll() { els.forEach(fit); }
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(fitAll, 150); });
+
+  function show(n) {
+    if (lock || n < 0 || n >= els.length || n === cur) return;
+    lock = true; setTimeout(() => lock = false, 1100);
+    const prev = cur >= 0 ? els[cur] : null;
+    if (prev) {
+      prev.classList.remove("active"); prev.classList.add("leaving");
+      setTimeout(() => prev.classList.remove("leaving"), 2000);
+    }
+    cur = n;
+    const el = els[cur];
+    el.style.setProperty("--cx", last.x + "%");
+    el.style.setProperty("--cy", last.y + "%");
+    el.classList.remove("skip");
+    el.classList.add("active");
+    flash.classList.remove("go"); void flash.offsetWidth; flash.classList.add("go");
+
+    hs.forEach((h, k) => { h.classList.toggle("done", k < cur); h.classList.toggle("on", k === cur); });
+
+    tapline.classList.remove("show");
+    done = false; clearTimeout(doneTimer);
+    doneTimer = setTimeout(() => {
+      done = true;
+      if (cur < els.length - 1) {
+        tapline.classList.add("show");
+        nextStageBtn.classList.remove("show");
+      } else {
+        nextStageBtn.classList.add("show");
+      }
+    }, est(scenes[cur]) * 1000);
+    heartBurst(cur === els.length - 1 ? 40 : 8);
+  }
+
+  function advance() {
+    if (!started || cur < 0) return;
+    if (!done) {
+      els[cur].classList.add("skip"); done = true; clearTimeout(doneTimer);
+      if (cur < els.length - 1) {
+        tapline.classList.add("show");
+      } else {
+        nextStageBtn.classList.add("show");
+      }
+      return;
+    }
+    if (cur < els.length - 1) {
+      show(cur + 1);
+    }
+  }
+
+  // زرار "كمل" لعرض الرسالة الطويلة النهائية
+  nextStageBtn.onclick = () => {
+    nextStageBtn.classList.remove("show");
+    tapline.style.display = "none";
+    hrow.style.display = "none";
+    finalScreen.classList.add("show");
+
+    // ربط زراير الواتساب برقمك والرسائل الجاهزة
+    const phone = "2086078064";
+    const msgForgive = "انا سامحتك ونا خلاص صافية يا حبيبي 🤍✨";
+    const msgNotYet = "مسمحتكش.. لسه شوية 🥺💔";
+
+    document.getElementById("btnForgive").href = `https://wa.me/${phone}?text=${encodeURIComponent(msgForgive)}`;
+    document.getElementById("btnNotYet").href = `https://wa.me/${phone}?text=${encodeURIComponent(msgNotYet)}`;
+
+    // تأثير الآلة الكاتبة (Typewriter Effect)
+    let i = 0;
+    typedTextEl.textContent = "";
+    function typeWriter() {
+      if (i < FINAL_LONG_MESSAGE.length) {
+        typedTextEl.textContent += FINAL_LONG_MESSAGE.charAt(i);
+        i++;
+        setTimeout(typeWriter, 35);
+      } else {
+        finalBtns.classList.add("show");
+      }
+    }
+    setTimeout(typeWriter, 500);
+  };
+
+  function remember(x, y) {
+    last = { x: Math.round(x / window.innerWidth * 100), y: Math.round(y / window.innerHeight * 100) };
+  }
+  document.addEventListener("click", e => {
+    remember(e.clientX, e.clientY);
+    if (!started || e.target.closest("button, a, input")) return;
+    if (wantMusic && !muted && music.paused) music.play().catch(() => {});
+    if (e.clientX > window.innerWidth * 0.75) show(cur - 1);
+    else advance();
+  });
+  document.addEventListener("keydown", e => {
+    if (!started) return;
+    if (e.key === "ArrowLeft" || e.key === " " || e.key === "Enter") { last = { x: 50, y: 50 }; advance(); }
+    if (e.key === "ArrowRight") { last = { x: 50, y: 50 }; show(cur - 1); }
+  });
+  document.addEventListener("touchmove", e => { if (!e.target.closest("input")) e.preventDefault(); }, { passive: false });
+  let tx = 0;
+  document.addEventListener("touchstart", e => tx = e.touches[0].clientX, { passive: true });
+  document.addEventListener("touchend", e => {
+    if (!started) return;
+    const t = e.changedTouches[0], dx = t.clientX - tx;
+    if (Math.abs(dx) > 60) { remember(t.clientX, t.clientY); dx < 0 ? advance() : show(cur - 1); }
+  }, { passive: true });
+
+  document.getElementById("mute").onclick = e => {
+    if (music.paused) { muted = false; music.play(); e.currentTarget.style.opacity = 1; }
+    else { muted = true; music.pause(); e.currentTarget.style.opacity = .45; }
+  };
+
+  const heartsBox = document.getElementById("hearts");
+  function heart() {
+    const h = document.createElement("span");
+    h.className = "fh";
+    h.textContent = ["♥","♥","♥","❀","✦"][Math.floor(Math.random() * 5)];
+    h.style.left = Math.random() * 100 + "vw";
+    h.style.fontSize = (12 + Math.random() * 22) + "px";
+    h.style.animationDuration = (7 + Math.random() * 7) + "s";
+    heartsBox.appendChild(h);
+    setTimeout(() => h.remove(), 15000);
+  }
+  function heartBurst(k) { for (let i = 0; i < k; i++) setTimeout(heart, i * 120); }
+  setInterval(() => { if (started) heart(); }, 900);
+</script>
+</body>
+</html>
